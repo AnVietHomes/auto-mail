@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #e9ecef; padding: 20px; }
+    .container { max-width: 900px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    h2 { text-align: center; color: #0056b3; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; }
+    .section { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 20px; margin-bottom: 20px; }
+    .section-title { font-size: 16px; font-weight: bold; color: #333; margin-bottom: 15px; text-transform: uppercase; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 14px; }
+    input[type="text"], textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    input[type="color"] { width: 100%; height: 40px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; }
+    button { background: #0056b3; color: white; border: none; padding: 15px; width: 100%; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: 10px; }
+    button:disabled { background: #999; cursor: not-allowed; }
+    #progressBar { width: 100%; height: 25px; margin-top: 10px; border-radius: 4px; overflow: hidden; }
+    .status { margin-top: 15px; font-weight: bold; color: #333; text-align: center; }
+    .log-box { width: 100%; height: 150px; overflow-y: scroll; background: #212529; color: #33ff33; border-radius: 4px; padding: 10px; font-size: 13px; margin-top: 15px; font-family: monospace; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Hệ thống Gửi Thư Mời Tự Động</h2>
+    
+    <div class="section">
+      <div class="section-title">1. Cấu hình Dữ liệu</div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>ID Thư mục Drive (chứa ảnh thư mời riêng):</label>
+          <input type="text" id="driveId" placeholder="VD: 1A2b3C4d...">
+        </div>
+        <div class="form-group">
+          <label>File Data (CSV) - Cột: Email, Họ tên, Chức danh, Phòng, Khối, Tên ảnh</label>
+          <input type="file" id="csvUpload" accept=".csv" style="padding: 5px 0;">
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">2. Tùy chỉnh Giao diện (Màu & Logo)</div>
+      <div class="grid-3">
+        <div class="form-group">
+          <label>Màu nền Tiêu đề (Top bar):</label>
+          <input type="color" id="bgHeader" value="#1a2b4c">
+        </div>
+        <div class="form-group">
+          <label>Màu nền Tổng (Bên ngoài):</label>
+          <input type="color" id="bgMain" value="#ffffff">
+        </div>
+        <div class="form-group">
+          <label>Màu nền Nội dung (Khối text):</label>
+          <input type="color" id="bgContent" value="#cafffb">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Upload Logo Sự Kiện (PNG nền trong suốt):</label>
+        <input type="file" id="logoUpload" accept="image/*">
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">3. Tùy chỉnh Nội dung Email</div>
+      <div class="form-group">
+        <label>Tiêu đề gửi Email (Subject):</label>
+        <input type="text" id="subject" placeholder="[An Việt] Thư mời tham dự Year End Party 2026">
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Tiêu đề trên Logo:</label>
+          <input type="text" id="titleLogo" value="THƯ MỜI THAM DỰ SỰ KIỆN">
+        </div>
+        <div class="form-group">
+          <label>Tên Sự kiện (Hiển thị trong nội dung):</label>
+          <input type="text" id="eventName" value="YEAR END PARTY 2026 - IGNITE THE SKY">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Nội dung thư mời chung:</label>
+        <textarea id="mainContent" rows="4" placeholder="Nhập nội dung thư... Các dòng sẽ tự động được giữ nguyên định dạng xuống dòng."></textarea>
+      </div>
+      <div class="grid-3">
+        <div class="form-group">
+          <label>Thời gian (VD: 00:00):</label>
+          <input type="text" id="timeText" value="00:00">
+        </div>
+        <div class="form-group">
+          <label>Địa điểm (VD: HA LONG BAY):</label>
+          <textarea id="locationText" rows="2" style="font-size:12px;">HA LONG BAY&#10;Địa chỉ chi tiết</textarea>
+        </div>
+        <div class="form-group">
+          <label>Ngày tháng (VD: THỨ 7 12.12.2026):</label>
+          <textarea id="dateText" rows="2" style="font-size:12px;">THỨ 7&#10;12.12.2026</textarea>
+        </div>
+      </div>
+    </div>
+
+    <button id="sendBtn" onclick="startSending()">🚀 CHẠY HỆ THỐNG GỬI MAIL</button>
+
+    <div class="status">
+      Tiến độ gửi: <span id="progressText">0 / 0</span>
+      <progress id="progressBar" value="0" max="100"></progress>
+    </div>
+    <div id="logBox" class="log-box">Hệ thống sẵn sàng...</div>
+  </div>
+
+  <script>
+    let logoBase64 = "";
+    let logoMime = "";
+
+    // Đọc file Logo
+    document.getElementById('logoUpload').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        logoMime = file.type;
+        const reader = new FileReader();
+        reader.onload = function(evt) { logoBase64 = evt.target.result; };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // Template HTML được nhúng sẵn - Không cần MKT đụng tới
+    const emailLayout = `
+    <div style="background-color: {{Bg_Main}}; padding: 20px; font-family: 'Segoe UI', Arial, sans-serif;">
+      <table align="center" width="100%" style="max-width: 800px; background-color: #ffffff; margin: auto; border-collapse: collapse; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+        
+        <!-- Header Top bar -->
+        <tr>
+          <td style="background-color: {{Bg_Header}}; color: #ffffff; padding: 15px 30px; font-size: 14px;">
+            <table width="100%" style="color: #ffffff;">
+              <tr>
+                <td align="left" style="font-weight: 500;">AN VIỆT HOMES &nbsp;&nbsp;&nbsp; AN VIỆT PROPERTY</td>
+                <td align="right" style="font-weight: 500;">THƯ MỜI THAM DỰ</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Logo Section -->
+        <tr>
+          <td align="center" style="padding: 40px 20px 20px;">
+            <h2 style="margin: 0 0 20px 0; font-size: 22px; color: #111;">{{Title_Logo}}</h2>
+            <img src="cid:logo_event" style="max-width: 80%; height: auto;" alt="Event Logo" />
+          </td>
+        </tr>
+
+        <!-- Text Content Box -->
+        <tr>
+          <td style="padding: 10px 40px 30px;">
+            <div style="background-color: {{Bg_Content}}; border-radius: 16px; padding: 30px; font-size: 15px; color: #111; line-height: 1.6;">
+              <p style="margin-top: 0; font-size: 16px;">
+                <strong>Trân trọng kính mời: Mr/Ms. {{Ho_Ten}}</strong><br>
+                {{Chuc_Danh}} | {{Phong}} | {{Khoi}}
+              </p>
+              <p style="font-size: 16px;"><strong>Tới tham dự sự kiện {{Event_Name}}</strong></p>
+              <div style="white-space: pre-wrap; text-align: justify;">{{Main_Content}}</div>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Time & Location Details -->
+        <tr>
+          <td style="padding: 10px 40px 30px;">
+            <table width="100%" style="text-align: center; font-size: 16px;">
+              <tr>
+                <td width="30%" style="vertical-align: middle;">
+                  <span style="font-size: 32px; font-weight: bold;">{{Time}}</span>
+                </td>
+                <td width="40%" style="vertical-align: middle; border-left: 2px solid #111; border-right: 2px solid #111; padding: 0 15px;">
+                  <div style="font-weight: bold; font-size: 18px; white-space: pre-wrap;">{{Location}}</div>
+                </td>
+                <td width="30%" style="vertical-align: middle;">
+                  <div style="font-size: 24px; font-weight: bold; white-space: pre-wrap; line-height: 1.2;">{{Date}}</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Personal Invite Image -->
+        <tr>
+          <td align="center" style="padding: 0 30px 40px;">
+            <img src="cid:thu_moi_image" style="width: 100%; max-width: 740px; border-radius: 16px; display: block;" alt="Thư mời chi tiết" />
+          </td>
+        </tr>
+      </table>
+    </div>
+    `;
+
+    function runGoogleScript(funcName, payload) {
+      return new Promise((resolve, reject) => {
+        google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[funcName](payload);
+      });
+    }
+
+    async function startSending() {
+      const driveId = document.getElementById('driveId').value;
+      const csvFile = document.getElementById('csvUpload').files[0];
+      const subject = document.getElementById('subject').value;
+      
+      if (!driveId || !csvFile || !logoBase64) {
+        alert("Thiếu thông tin! Cần nhập đủ ID Drive, tải File CSV và Upload ảnh Logo.");
+        return;
+      }
+
+      document.getElementById('sendBtn').disabled = true;
+      const logBox = document.getElementById('logBox');
+      logBox.innerHTML = "Đang phân tích cấu trúc Mail...<br>";
+
+      // Lấy cấu hình giao diện
+      const bgHeader = document.getElementById('bgHeader').value;
+      const bgMain = document.getElementById('bgMain').value;
+      const bgContent = document.getElementById('bgContent').value;
+      const titleLogo = document.getElementById('titleLogo').value;
+      const eventName = document.getElementById('eventName').value;
+      const mainContent = document.getElementById('mainContent').value;
+      const timeText = document.getElementById('timeText').value;
+      const locationText = document.getElementById('locationText').value;
+      const dateText = document.getElementById('dateText').value;
+
+      // Chuẩn bị khung HTML chung cho toàn bộ sự kiện
+      let preparedTemplate = emailLayout
+        .replace(/{{Bg_Header}}/g, bgHeader)
+        .replace(/{{Bg_Main}}/g, bgMain)
+        .replace(/{{Bg_Content}}/g, bgContent)
+        .replace(/{{Title_Logo}}/g, titleLogo)
+        .replace(/{{Event_Name}}/g, eventName)
+        .replace(/{{Main_Content}}/g, mainContent)
+        .replace(/{{Time}}/g, timeText)
+        .replace(/{{Location}}/g, locationText)
+        .replace(/{{Date}}/g, dateText);
+
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        const text = e.target.result;
+        const rows = text.split('\n').filter(row => row.trim() !== '');
+        
+        const total = rows.length - 1;
+        document.getElementById('progressBar').max = total;
+        let successCount = 0;
+
+        for (let i = 1; i < rows.length; i++) {
+          // Xử lý tách chuỗi CSV cơ bản
+          const cols = rows[i].split(',');
+          const payload = {
+            email: cols[0]?.trim(),
+            name: cols[1]?.trim(),
+            title: cols[2]?.trim(),
+            department: cols[3]?.trim(),
+            division: cols[4]?.trim(),
+            imageFileName: cols[5]?.trim(),
+            driveFolderId: driveId,
+            subject: subject,
+            preparedHtmlTemplate: preparedTemplate,
+            logoBase64: logoBase64,
+            logoMime: logoMime
+          };
+
+          if (payload.email) {
+            logBox.innerHTML += `> Đang gửi: ${payload.name} (${payload.email})...<br>`;
+            logBox.scrollTop = logBox.scrollHeight;
+
+            try {
+              const res = await runGoogleScript('sendSingleEmailWorker', payload);
+              if (res.success) {
+                logBox.innerHTML += `<span style="color:#00ff00">  [OK] Đã gửi thành công</span><br>`;
+              } else {
+                logBox.innerHTML += `<span style="color:#ff4444">  [LỖI] ${res.error}</span><br>`;
+              }
+            } catch (err) {
+              logBox.innerHTML += `<span style="color:#ff4444">  [LỖI HỆ THỐNG] Không phản hồi</span><br>`;
+            }
+          }
+
+          successCount++;
+          document.getElementById('progressBar').value = successCount;
+          document.getElementById('progressText').innerText = `${successCount} / ${total}`;
+          
+          await new Promise(r => setTimeout(r, 1000));
+        }
+        logBox.innerHTML += `<br><strong>🏁 HOÀN TẤT CHIẾN DỊCH GỬI ${total} THƯ!</strong><br>`;
+        document.getElementById('sendBtn').disabled = false;
+      };
+      reader.readAsText(csvFile);
+    }
+  </script>
+</body>
+</html>
