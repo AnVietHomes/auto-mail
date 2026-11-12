@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hệ thống Gửi Thư Mời Sự Kiện - An Việt</title>
+  
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-page: #0f1117;
+      --bg-card: rgba(26, 29, 36, 0.75); /* Tăng độ sáng và trong suốt của kính */
+      --bg-section: rgba(34, 38, 49, 0.6); 
+      --bg-input: #15171d;
+      --border-color: #333a47;
+      --text-main: #e2e8f0;
+      --text-muted: #94a3b8;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --success: #10b981;
+      --error: #ef4444;
+      --matrix-green: #00ff41;
+      --matrix-dark: #008f11;
+    }
+
+    body { 
+      font-family: 'Manrope', sans-serif; 
+      background-color: var(--bg-page); /* Mặc định là nền Dark Mode phẳng thông thường */
+      color: var(--text-main); 
+      padding: 40px 20px; 
+      margin: 0; 
+      line-height: 1.5;
+      overflow-x: hidden;
+      transition: background-color 0.5s ease;
+    }
+
+    /* Hiệu ứng Matrix toàn màn hình (Mặc định ẩn đi) */
+    #matrixCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -1; 
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 1s ease;
+    }
+
+    /* Khi kích hoạt chế độ chạy ma trận */
+    body.matrix-active {
+      background-color: #000;
+    }
+    body.matrix-active #matrixCanvas {
+      opacity: 1;
+    }
+    /* Chuyển container sang hiệu ứng Liquid Glass sáng hơn khi chạy */
+    body.matrix-active .container {
+      background: rgba(15, 20, 28, 0.45);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(0, 255, 65, 0.3);
+      box-shadow: 0 0 40px rgba(0, 255, 65, 0.15);
+    }
+    body.matrix-active .section {
+      background: rgba(20, 25, 35, 0.4);
+      border-color: rgba(0, 255, 65, 0.15);
+    }
+    body.matrix-active input[type="text"], 
+    body.matrix-active textarea {
+      color: var(--matrix-green);
+      border-color: rgba(0, 255, 65, 0.2);
+    }
+
+    .container { 
+      position: relative;
+      z-index: 1; 
+      max-width: 1400px; 
+      width: 95%; 
+      margin: auto; 
+      background: var(--bg-card); 
+      padding: 40px; 
+      border-radius: 16px; 
+      box-shadow: 0 10px 40px rgba(0,0,0,0.4); 
+      border: 1px solid var(--border-color); 
+      transition: all 0.5s ease;
+    }
+    
+    .app-header { display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 35px; padding-bottom: 25px; border-bottom: 1px solid var(--border-color); }
+    .app-header img { height: 45px; width: auto; }
+    .app-header h1 { color: #ffffff; font-weight: 800; font-size: 22px; margin: 0; letter-spacing: -0.2px; text-transform: uppercase; line-height: 1.3; }
+
+    .section { background: var(--bg-section); border: 1px solid var(--border-color); border-radius: 12px; padding: 25px; margin-bottom: 25px; transition: all 0.3s ease; }
+    .section:hover { border-color: #4b5563; }
+    .section-title { font-size: 14px; font-weight: 700; color: var(--accent); margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 10px; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 25px; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 13px; color: var(--text-muted); }
+
+    input[type="text"], textarea { width: 100%; padding: 14px; background-color: var(--bg-input); color: #ffffff; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; font-family: 'Manrope', sans-serif; font-size: 14px; transition: all 0.2s ease; }
+    input[type="text"]:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
+    input[type="file"] { width: 100%; padding: 10px; background-color: var(--bg-input); border: 1px dashed var(--border-color); border-radius: 8px; color: var(--text-main); font-size: 13px; cursor: pointer; }
+    input[type="color"] { width: 100%; height: 48px; background-color: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; padding: 4px; }
+
+    button { background: linear-gradient(135deg, var(--accent), #2563eb); color: white; border: none; padding: 16px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 700; margin-top: 10px; font-family: 'Manrope', sans-serif; transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
+    button:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(37, 99, 235, 0.4); }
+    button:active { transform: translateY(0); }
+    button:disabled { background: #475569; color: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    #progressBar { width: 100%; height: 12px; margin-top: 15px; border-radius: 10px; background-color: var(--bg-input); overflow: hidden; }
+    #progressBar::-webkit-progress-bar { background-color: var(--bg-input); }
+    #progressBar::-webkit-progress-value { background-color: var(--accent); border-radius: 10px; }
+    #progressBar::-moz-progress-bar { background-color: var(--accent); border-radius: 10px; }
+
+    .status { margin-top: 25px; font-weight: 600; color: var(--text-main); text-align: center; font-size: 14px; }
+    
+    .log-box { width: 100%; height: 250px; overflow-y: auto; background: #05070a; color: var(--success); border-radius: 8px; border: 1px solid var(--border-color); padding: 15px; font-size: 14px; margin-top: 20px; font-family: 'Courier New', Courier, monospace; box-sizing: border-box; line-height: 1.6; }
+    .log-box::-webkit-scrollbar { width: 8px; }
+    .log-box::-webkit-scrollbar-track { background: #111; border-radius: 4px; }
+    .log-box::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+    ::placeholder { color: #475569; }
+    
+    @media (max-width: 900px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .container { padding: 25px; width: 100%; }
+      .app-header { flex-direction: column; text-align: center; gap: 15px; }
+    }
+  </style>
+</head>
+<body>
+  
+  <canvas id="matrixCanvas"></canvas>
+
+  <div class="container">
+    <div class="app-header">
+      <img src="logodark.svg" alt="An Việt Homes Logo">
+      <h1>HỆ THỐNG GỬI THƯ MỜI SỰ KIỆN TỰ ĐỘNG AN VIỆT HOMES</h1>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
+        1. Nguồn Dữ Liệu
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Link thư mục Google Drive (chứa ảnh cá nhân):</label>
+          <input type="text" id="driveId" placeholder="Dán link folder Drive vào đây...">
+        </div>
+        <div class="form-group">
+          <label>File Data (CSV) - Cột: Email, Họ tên, Chức danh, Phòng, Khối, Tên ảnh</label>
+          <input type="file" id="csvUpload" accept=".csv">
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path></svg>
+        2. Tùy chỉnh Brand & Màu sắc
+      </div>
+      <div class="grid-3">
+        <div class="form-group">
+          <label>Màu nền Top Bar:</label>
+          <input type="color" id="bgHeader" value="#0a1930">
+        </div>
+        <div class="form-group">
+          <label>Màu nền Tổng (Bên ngoài):</label>
+          <input type="color" id="bgMain" value="#f1f5f9">
+        </div>
+        <div class="form-group">
+          <label>Màu khối Nội dung:</label>
+          <input type="color" id="bgContent" value="#e0f2fe">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Upload Logo Sự Kiện (Định dạng PNG/Trong suốt):</label>
+        <input type="file" id="logoUpload" accept="image/*">
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 19v-8.93a2 2 0 01.89-1.664l7-4.666a2 2 0 012.22 0l7 4.666A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-1.14.76a2 2 0 01-2.22 0l-1.14-.76"></path></svg>
+        3. Nội dung Mail
+      </div>
+      <div class="form-group">
+        <label>Tiêu đề gửi Email (Subject Gmail):</label>
+        <input type="text" id="subject" placeholder="[An Việt] Thư mời tham dự Year End Party 2026">
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Tiêu đề phụ trên Logo:</label>
+          <input type="text" id="titleLogo" value="THƯ MỜI THAM DỰ SỰ KIỆN">
+        </div>
+        <div class="form-group">
+          <label>Tên Sự kiện chính thức:</label>
+          <input type="text" id="eventName" value="YEAR END PARTY 2026 - IGNITE THE SKY">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Nội dung thư mời chung (Duy trì định dạng xuống dòng):</label>
+        <textarea id="mainContent" rows="4" placeholder="Nhập nội dung thông điệp gửi tới nhân sự..."></textarea>
+      </div>
+      <div class="grid-3">
+        <div class="form-group">
+          <label>Giờ bắt đầu:</label>
+          <input type="text" id="timeText" value="18:00">
+        </div>
+        <div class="form-group">
+          <label>Địa điểm tổ chức:</label>
+          <textarea id="locationText" rows="2">HA LONG BAY&#10;InterContinental Resort</textarea>
+        </div>
+        <div class="form-group">
+          <label>Ngày tháng:</label>
+          <textarea id="dateText" rows="2">THỨ 7&#10;12.12.2026</textarea>
+        </div>
+      </div>
+    </div>
+
+    <button id="sendBtn" onclick="startSending()">🚀 KHỞI ĐỘNG HỆ THỐNG GỬI MAIL</button>
+
+    <div class="status">
+      Tiến trình xử lý: <span id="progressText" style="color: var(--accent);">0 / 0</span>
+      <progress id="progressBar" value="0" max="100"></progress>
+    </div>
+    <div id="logBox" class="log-box">> _ SYSTEM STANDBY. AWAITING USER COMMAND...</div>
+  </div>
+
+  <script>
+    // --- THUẬT TOÁN VẼ MATRIX NỀN ---
+    const canvas = document.getElementById('matrixCanvas');
+    const ctx = canvas.getContext('2d');
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const katakana = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ';
+    const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const nums = '0123456789';
+    const alphabet = katakana + latin + nums;
+    
+    const fontSize = 16;
+    const columns = canvas.width / fontSize;
+    const drops = [];
+    for (let x = 0; x < columns; x++) { drops[x] = 1; }
+
+    function drawMatrix() {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)'; 
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      ctx.fillStyle = '#00ff41'; 
+      ctx.font = fontSize + 'px monospace';
+
+      for (let i = 0; i < drops.length; i++) {
+        const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+        
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+          drops[i] = 0;
+        }
+        drops[i]++;
+      }
+    }
+    
+    let matrixInterval = null;
+    function startMatrixEffect() {
+      document.body.classList.add('matrix-active');
+      if (!matrixInterval) {
+        matrixInterval = setInterval(drawMatrix, 40);
+      }
+    }
+
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+
+    // --- HỆ THỐNG XỬ LÝ MAIL ---
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzqmOUe_SMkZTuqze2q0xuQ_vAxhIlG7FGNL8NqN4kfvPl7cyywlTuzaiOLmCR5KPgP2Q/exec";
+
+    let logoBase64 = "";
+    let logoMime = "";
+
+    document.getElementById('logoUpload').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        logoMime = file.type;
+        const reader = new FileReader();
+        reader.onload = function(evt) { logoBase64 = evt.target.result; };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    const emailLayout = `
+    <!DOCTYPE html>
+    <html lang="vi">
+    <head>
+      <!--[if mso]>
+      <style type="text/css">
+        body, table, td, div, p, span, h1, h2, h3 { font-family: 'Segoe UI', Arial, Helvetica, sans-serif !important; }
+      </style>
+      <![endif]-->
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+        body, table, td, div, p, span { font-family: 'Manrope', 'Segoe UI', Arial, sans-serif !important; }
+      </style>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: {{Bg_Main}};">
+      <div style="background-color: {{Bg_Main}}; padding: 30px 15px; font-family: 'Manrope', 'Segoe UI', Arial, sans-serif;">
+        <table align="center" width="100%" style="max-width: 800px; background-color: #ffffff; margin: auto; border-collapse: collapse; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.06);">
+          <tr>
+            <td style="background-color: {{Bg_Header}}; color: #ffffff; padding: 18px 35px; font-size: 14px;">
+              <table width="100%" style="color: #ffffff; font-family: 'Manrope', 'Segoe UI', Arial, sans-serif;">
+                <tr>
+                  <td align="left" style="font-weight: 600; letter-spacing: 0.5px;">AN VIỆT HOMES &nbsp;&nbsp;|&nbsp;&nbsp; AN VIỆT PROPERTY</td>
+                  <td align="right" style="font-weight: 600; letter-spacing: 0.5px;">THƯ MỜI THAM DỰ</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding: 45px 20px 25px;">
+              <h2 style="margin: 0 0 25px 0; font-size: 24px; color: #1e293b; font-weight: 700; letter-spacing: -0.5px;">{{Title_Logo}}</h2>
+              <img src="cid:logo_event" style="max-width: 85%; height: auto;" alt="Event Logo" />
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 15px 45px 35px;">
+              <div style="background-color: {{Bg_Content}}; border-radius: 16px; padding: 35px; font-size: 15px; color: #334155; line-height: 1.7; border: 1px solid rgba(0,0,0,0.03);">
+                <p style="margin-top: 0; font-size: 17px; color: #0f172a;">
+                  <strong>Trân trọng kính mời: <span style="color: #2563eb;">Mr/Ms. {{Ho_Ten}}</span></strong>{{Chuc_Danh_Block}}
+                </p>
+                <p style="font-size: 17px; color: #0f172a;"><strong>Tới tham dự sự kiện {{Event_Name}}</strong></p>
+                <div style="white-space: pre-wrap; text-align: justify;">{{Main_Content}}</div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 45px 40px;">
+              <table width="100%" style="text-align: center; font-size: 16px; font-family: 'Manrope', 'Segoe UI', Arial, sans-serif;">
+                <tr>
+                  <td width="30%" style="vertical-align: middle;">
+                    <span style="font-size: 34px; font-weight: 800; color: #0f172a;">{{Time}}</span>
+                  </td>
+                  <td width="40%" style="vertical-align: middle; border-left: 2px solid #cbd5e1; border-right: 2px solid #cbd5e1; padding: 0 15px;">
+                    <div style="font-weight: 700; font-size: 17px; white-space: pre-wrap; color: #334155; line-height: 1.4;">{{Location}}</div>
+                  </td>
+                  <td width="30%" style="vertical-align: middle;">
+                    <div style="font-size: 24px; font-weight: 800; white-space: pre-wrap; line-height: 1.3; color: #0f172a;">{{Date}}</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding: 0 35px 45px;">
+              <img src="cid:thu_moi_image" style="width: 100%; max-width: 740px; border-radius: 12px; display: block; box-shadow: 0 4px 15px rgba(0,0,0,0.1);" alt="Thư mời chi tiết" />
+            </td>
+          </tr>
+        </table>
+      </div>
+    </body>
+    </html>
+    `;
+
+    function parseCSVLine(text) {
+      const result = [];
+      let cur = '', inQuotes = false;
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        if (char === '"') { inQuotes = !inQuotes; } 
+        else if (char === ',' && !inQuotes) { result.push(cur.trim()); cur = ''; } 
+        else { cur += char; }
+      }
+      result.push(cur.trim());
+      return result;
+    }
+
+    async function callGasApi(payload) {
+      const response = await fetch(GAS_WEB_APP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+      return await response.json();
+    }
+
+    function createMatrixLogLine(container, infoText) {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*!~';
+      const div = document.createElement('div');
+      div.style.marginBottom = '6px';
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+
+      let isScrambling = true;
+      let interval = setInterval(() => {
+        if (!isScrambling) { clearInterval(interval); return; }
+        let scrambled = '';
+        for(let i = 0; i < 30; i++) { scrambled += chars[Math.floor(Math.random() * chars.length)]; }
+        div.innerHTML = `<span style="color: #00ff41;">> [ENCRYPTING] ${infoText} </span> <br> 
+                         <span style="color: var(--matrix-dark);">  ↳ DATA_STREAM: ${scrambled}</span>`;
+      }, 40);
+
+      return {
+        finish: (finalResultHtml) => {
+          isScrambling = false;
+          div.innerHTML = `<span style="color: #6ee7b7;">> [TRANSMITTED] ${infoText} </span> <br> ${finalResultHtml}`;
+          container.scrollTop = container.scrollHeight;
+        }
+      };
+    }
+
+    async function startSending() {
+      const rawDriveInput = document.getElementById('driveId').value.trim();
+      const folderIdMatch = rawDriveInput.match(/[-\w]{25,}/);
+      const driveId = folderIdMatch ? folderIdMatch[0] : rawDriveInput;
+
+      const csvFile = document.getElementById('csvUpload').files[0];
+      const subject = document.getElementById('subject').value.trim();
+      
+      if (!driveId || !csvFile || !logoBase64 || !subject) {
+        alert("Vui lòng điền đủ: Link Drive, Upload Logo, File CSV và Tiêu đề Email.");
+        return;
+      }
+
+      // 🚀 KÍCH HOẠT HIỆU ỨNG MA TRẬN KHI BẤM GỬI MAIL
+      startMatrixEffect();
+
+      document.getElementById('sendBtn').disabled = true;
+      const logBox = document.getElementById('logBox');
+      logBox.innerHTML = "> ESTABLISHING SECURE CONNECTION...<br>> COMPILING DATA BLOCKS...<br><br>";
+
+      const preparedTemplate = emailLayout
+        .replace(/{{Bg_Header}}/g, document.getElementById('bgHeader').value)
+        .replace(/{{Bg_Main}}/g, document.getElementById('bgMain').value)
+        .replace(/{{Bg_Content}}/g, document.getElementById('bgContent').value)
+        .replace(/{{Title_Logo}}/g, document.getElementById('titleLogo').value)
+        .replace(/{{Event_Name}}/g, document.getElementById('eventName').value)
+        .replace(/{{Main_Content}}/g, document.getElementById('mainContent').value)
+        .replace(/{{Time}}/g, document.getElementById('timeText').value)
+        .replace(/.../.value || '', '') // giữ nguyên logic thời gian
+        .replace(/{{Location}}/g, document.getElementById('locationText').value)
+        .replace(/{{Date}}/g, document.getElementById('dateText').value);
+
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        const text = e.target.result;
+        const rows = text.split(/\r?\n/).filter(row => row.trim() !== '');
+        const total = rows.length - 1;
+        
+        if (total <= 0) {
+          alert("File CSV trống!");
+          document.getElementById('sendBtn').disabled = false;
+          return;
+        }
+
+        document.getElementById('progressBar').max = total;
+        let processedCount = 0;
+
+        for (let i = 1; i < rows.length; i++) {
+          const cols = parseCSVLine(rows[i]);
+          
+          const email = cols[0] ? cols[0].trim() : "";
+          const name = cols[1] ? cols[1].trim() : "";
+          const title = cols[2] ? cols[2].trim() : "";
+          const department = cols[3] ? cols[3].trim() : "";
+          const division = cols[4] ? cols[4].trim() : "";
+          const imageFileName = cols[5] ? cols[5].trim() : "";
+
+          const detailsArray = [title, department, division].filter(item => item !== "");
+          let chucDanhBlock = "";
+          if (detailsArray.length > 0) {
+            chucDanhBlock = `<br><span style="font-size: 15px;">${detailsArray.join(" &nbsp;|&nbsp; ")}</span>`;
+          }
+
+          const payload = { email: email, name: name, chucDanhBlock: chucDanhBlock, imageFileName: imageFileName, driveFolderId: driveId, subject: subject, preparedHtmlTemplate: preparedTemplate, logoBase64: logoBase64, logoMime: logoMime };
+
+          if (payload.email) {
+            const matrixLogger = createMatrixLogLine(logBox, `${payload.name} (${payload.email})`);
+            try {
+              const res = await callGasApi(payload);
+              if (res.success) {
+                matrixLogger.finish(`<span style="color: var(--matrix-green);">  ↳ [SYS.OK] Packet secured.</span>`);
+              } else {
+                matrixLogger.finish(`<span style="color: var(--error);">  ↳ [SYS.ERR] ${res.error}</span>`);
+              }
+            } catch (err) {
+              matrixLogger.finish(`<span style="color: var(--error);">  ↳ [NET.ERR] ${err.message}</span>`);
+            }
+          }
+
+          processedCount++;
+          document.getElementById('progressBar').value = processedCount;
+          document.getElementById('progressText').innerText = `${processedCount} / ${total}`;
+          await new Promise(r => setTimeout(r, 1000));
+        }
+
+        logBox.innerHTML += `<br><strong style="color: var(--matrix-green); font-size: 16px;">> MISSION ACCOMPLISHED: ${total} PACKETS DISPATCHED.</strong><br><br>`;
+        logBox.scrollTop = logBox.scrollHeight;
+        document.getElementById('sendBtn').disabled = false;
+      };
+      reader.readAsText(csvFile);
+    }
+  </script>
+</body>
+</html>
